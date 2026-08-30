@@ -1,0 +1,16 @@
+{
+  "name": "aegis-browser-extension",
+  "version": "0.30.0",
+  "private": true,
+  "description": "A.E.G.I.S. explainable anti-phishing browser extension",
+  "scripts": {
+    "test": "node scripts/run-all-tests.js",
+    "test:core": "node tests/run-tests.js",
+    "test:ai": "node tests/run-ai-classifier-tests.js",
+    "test:regression": "node tests/run-source-regressions.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
+

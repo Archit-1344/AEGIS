@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>A.E.G.I.S.</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="pd-header">
+    <div class="pd-header-brand">
+      <h1>A.E.G.I.S.</h1>
+    </div>
+    <div class="pd-header-actions">
+      <button id="themeToggleBtn" class="pd-icon-btn" type="button" title="Switch appearance" aria-label="Switch between light and dark theme">
+        <span id="themeToggleIcon" class="pd-theme-icon">🌙</span>
+      </button>
+      <button id="openDashboardBtn" class="pd-dashboard-link" type="button" title="Open the A.E.G.I.S. web dashboard">Dashboard ↗</button>
+    </div>
+  </div>
+
+  <nav class="pd-tabs">
+    <button class="pd-tab pd-tab-active" data-tab="home"><span class="pd-tab-icon">🏠</span><span class="pd-tab-label">Home</span></button>
+    <button class="pd-tab" data-tab="zones"><span class="pd-tab-icon">🚩</span><span class="pd-tab-label">Zones</span></button>
+    <button class="pd-tab" data-tab="scan"><span class="pd-tab-icon">🔍</span><span class="pd-tab-label">Scan</span></button>
+    <button class="pd-tab" data-tab="settings"><span class="pd-tab-icon">⚙️</span><span class="pd-tab-label">Settings</span></button>
+  </nav>
+
+  <!-- HOME TAB: current open email's score -->
+  <section id="tab-home" class="pd-tab-panel pd-tab-panel-active">
+    <div id="content">
+      <p class="muted">Open an email in Gmail or Outlook to get started.</p>
+    </div>
+  </section>
+
+  <!-- ZONES TAB: Danger Zone / Moderate Zone (issue #2's chosen alternative to real folders) -->
+  <section id="tab-zones" class="pd-tab-panel">
+    <div class="pd-zone-toggle">
+      <button class="pd-zone-btn pd-zone-btn-active" data-zone="danger">🚫 Danger Zone <span id="dangerCount" class="pd-zone-count">0</span></button>
+      <button class="pd-zone-btn" data-zone="moderate">⚠️ Moderate Zone <span id="moderateCount" class="pd-zone-count">0</span></button>
+    </div>
+    <button id="clearZoneBtn" class="pd-btn pd-zone-clear" type="button">Clear current zone</button>
+    <ul id="zoneList" class="pd-zone-list"></ul>
+    <p id="zoneEmpty" class="muted small pd-hidden">Nothing here yet — flagged senders from your inbox will show up as you scan.</p>
+  </section>
+
+  <!-- SCAN TAB: manual scan + consent -->
+  <section id="tab-scan" class="pd-tab-panel">
+    <p class="muted small">Scan the currently open email on demand. Useful when auto-scan is off, or to force a fresh (non-cached) check.</p>
+    <div id="consentPanel" class="pd-consent-panel pd-hidden">
+      <p class="pd-consent-title">Allow this scan?</p>
+      <p class="pd-consent-body">
+        This checks <strong id="consentEmail"></strong>'s sending domain using anonymous,
+        content-free DNS/RDAP lookups, scans links, and runs a local typosquat
+        check. No email content is sent anywhere. Access applies only to this email while it stays open.
+      </p>
+      <div class="pd-consent-actions">
+        <button id="consentAllow" class="pd-btn pd-btn-primary">Allow</button>
+        <button id="consentDeny" class="pd-btn">Deny</button>
+      </div>
+    </div>
+    <button id="scanBtn" class="pd-btn pd-btn-primary pd-scan-btn">Scan this email</button>
+    <div id="historySection" class="pd-hidden">
+      <h2>Previous flags for this sender</h2>
+      <ul id="historyList" class="pd-history-list"></ul>
+    </div>
+  </section>
+
+  <!-- SETTINGS TAB (About + Privacy now live here as expandable sections, alongside the dashboard link) -->
+  <section id="tab-settings" class="pd-tab-panel">
+    <label class="pd-toggle-row">
+      <span>Auto-scan opened emails</span>
+      <input type="checkbox" id="autoScanCheckbox" />
+    </label>
+    <p class="muted small">On by default — opened emails (sender, content, and links) are scanned automatically. Turn this off if you'd rather see a "Not yet scanned" header with a Scan button instead, so nothing is checked until you confirm.</p>
+    <label class="pd-toggle-row">
+      <span>Auto-scan inbox list (tags on rows)</span>
+      <input type="checkbox" id="autoScanListCheckbox" />
+    </label>
+    <p class="muted small">On by default. Adds a colored score tag to each visible inbox row using only the sender and subject/snippet — no message body or links are read for this lighter check.</p>
+    <button id="clearCacheBtn" class="pd-btn" type="button">Clear scan cache</button>
+    <p class="muted small">Every sender's score is cached so repeat opens don't re-scan. If a score looks stuck or wrong for a sender, clear the cache and reopen the email to force a fresh scan. This does not change your trusted-contacts whitelist.</p>
+
+    <h2>Gmail Verified Header Mode (optional)</h2>
+    <div class="pd-oauth-card">
+      <div class="pd-oauth-heading">
+        <strong id="gmailOAuthStatus">Checking connection…</strong>
+        <span id="gmailOAuthDot" class="pd-oauth-dot"></span>
+      </div>
+      <p class="muted small">With your consent, A.E.G.I.S. reads only Gmail message metadata headers to show Gmail's SPF, DKIM and DMARC delivery results. It cannot read the email body through this permission.</p>
+      <p id="gmailOAuthMessage" class="pd-oauth-message small"></p>
+      <div class="pd-oauth-actions">
+        <button id="connectGmailBtn" class="pd-btn pd-btn-primary" type="button">Connect Gmail</button>
+        <button id="disconnectGmailBtn" class="pd-btn pd-hidden" type="button">Disconnect &amp; revoke</button>
+      </div>
+    </div>
+    <h2>Outlook Verified Header Mode (optional)</h2>
+    <div class="pd-oauth-card">
+      <div class="pd-oauth-heading">
+        <strong id="outlookOAuthStatus">Checking connection…</strong>
+        <span id="outlookOAuthDot" class="pd-oauth-dot"></span>
+      </div>
+      <p class="muted small">With your consent, A.E.G.I.S. requests only Microsoft Graph <strong>Mail.ReadBasic</strong>. It uses sender, Reply-To and delivery-authentication headers for the open message. If Outlook's URL ID is incompatible, it may inspect up to 100 sender-filtered basic metadata matches, exact-check them locally and refuse ambiguous results. It does not request the body, preview or attachments.</p>
+      <p id="outlookOAuthMessage" class="pd-oauth-message small"></p>
+      <div class="pd-oauth-actions">
+        <button id="connectOutlookBtn" class="pd-btn pd-btn-primary" type="button">Connect Outlook</button>
+        <button id="disconnectOutlookBtn" class="pd-btn pd-hidden" type="button">Disconnect Outlook</button>
+      </div>
+    </div>
+    <h2>Trusted senders</h2>
+    <p class="muted small">Remove trust at any time. The next scan will apply normal sender checks again.</p>
+    <ul id="trustedSenderList" class="pd-trusted-list"></ul>
+    <p id="trustedSenderEmpty" class="muted small">No trusted senders saved.</p>
+    <h2>Trusted Outlook messages</h2>
+    <p class="muted small">When Outlook hides the real sender address, trust applies only to that exact message. This prevents a copied display name from becoming a permanently trusted sender.</p>
+    <ul id="trustedMessageList" class="pd-trusted-list"></ul>
+    <p id="trustedMessageEmpty" class="muted small">No message-specific Outlook trust saved.</p>
+
+    <!-- Privacy Activity Log — moved out of its own tab into an expandable card -->
+    <div class="pd-accordion" id="accordion-privacy">
+      <button class="pd-accordion-head" type="button" data-accordion="privacy">
+        <span>🔒 Privacy activity log</span>
+        <span class="pd-accordion-chevron">⌄</span>
+      </button>
+      <div class="pd-accordion-body pd-hidden" id="accordion-body-privacy">
+        <p class="muted small">This records only network activity initiated by A.E.G.I.S., not Gmail/Outlook's own traffic.</p>
+        <div class="pd-privacy-proof">
+          <div><strong>No</strong><span>Email body uploaded</span></div>
+          <div><strong>Opt-in only</strong><span>Selected provider header metadata</span></div>
+          <div><strong>Domain only</strong><span>DNS/RDAP lookups</span></div>
+        </div>
+        <button id="clearPrivacyLogBtn" class="pd-btn pd-privacy-clear" type="button">Clear activity log</button>
+        <ul id="privacyActivityList" class="pd-privacy-list"></ul>
+        <p id="privacyActivityEmpty" class="muted small">No A.E.G.I.S. activity recorded yet. Scan an email to see local checks and domain-only lookups.</p>
+        <p class="muted small">The log stores lookup domains and timestamps only. It never stores message text, subjects, email addresses or full link URLs.</p>
+      </div>
+    </div>
+
+    <!-- About — moved out of its own tab into an expandable card -->
+    <div class="pd-accordion" id="accordion-about">
+      <button class="pd-accordion-head" type="button" data-accordion="about">
+        <span>ℹ️ About A.E.G.I.S.</span>
+        <span class="pd-accordion-chevron">⌄</span>
+      </button>
+      <div class="pd-accordion-body pd-hidden" id="accordion-body-about">
+        <p class="small pd-about-tagline">Anti-Phishing Email Gateway &amp; Intelligence System</p>
+        <button id="openDashboardAboutBtn" class="pd-btn pd-btn-primary" type="button">Open web dashboard ↗</button>
+        <p class="small">
+          A.E.G.I.S. is a browser extension that checks incoming Gmail/Outlook mail for signs of
+          spoofing, scams, and phishing — entirely on your device. Instead of a binary "block or
+          allow," it gives every email a 0–100 trust score with a plain-English explanation, so you
+          can make an informed call on borderline mail instead of just guessing or losing legitimate
+          messages to an overly aggressive filter.
+        </p>
+        <h2>How it works</h2>
+        <p class="small">Layered protection with local message analysis — no email body content is sent to an A.E.G.I.S. server:</p>
+        <ul class="pd-about-list">
+          <li><strong>Membrane 0 — Trusted sender:</strong> known contacts skip sender-reputation penalties, while risky message content is still checked.</li>
+          <li><strong>Membrane 1 — Authentication:</strong> SPF &amp; DMARC record publication via DNS-over-HTTPS, plus optional Gmail/Outlook provider-reported SPF/DKIM/DMARC results through OAuth.</li>
+          <li><strong>Membrane 2 — Visual similarity:</strong> typosquat &amp; brand-impersonation detection on sender domain and links.</li>
+          <li><strong>Membrane 3 — Domain age:</strong> RDAP lookup for newly-registered domains.</li>
+          <li><strong>Membrane 4 — Attachments:</strong> filename/extension check for executable, script, and macro-capable file types.</li>
+          <li><strong>Content &amp; link scan:</strong> keyword and link-reputation checks layered on top.</li>
+          <li><strong>Protected Click:</strong> suspicious links pause before navigation and reveal the real destination and reasons.</li>
+          <li><strong>Verified Header Mode:</strong> optional provider metadata access for Gmail and Outlook; A.E.G.I.S. stores the result summary, never the original header, body or long-lived OAuth token.</li>
+        </ul>
+        <p class="small">Gmail/Outlook's own spam classification is used only as one minor signal alongside all of the above — never as the deciding factor.</p>
+        <p class="muted small">Version <span id="aboutVersion">—</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Floating help chatbot (replaces the old Help tab) -->
+  <button id="chatFabBtn" class="pd-chat-fab" type="button" aria-label="Open A.E.G.I.S. help chat" title="Ask A.E.G.I.S.">
+    <span class="pd-chat-fab-icon">💬</span>
+    <span id="chatFabDot" class="pd-chat-fab-dot pd-hidden"></span>
+  </button>
+
+  <div id="chatPanel" class="pd-chat-panel pd-hidden" role="dialog" aria-label="A.E.G.I.S. help chat">
+    <div class="pd-chat-head">
+      <div class="pd-chat-head-title">
+        <span class="pd-chat-head-dot"></span>
+        <div>
+          <strong>A.E.G.I.S. Assistant</strong>
+          <span>Answers using this popup's own data</span>
+        </div>
+      </div>
+      <button id="chatCloseBtn" class="pd-icon-btn" type="button" aria-label="Close chat">✕</button>
+    </div>
+    <div id="chatMessages" class="pd-chat-messages"></div>
+    <div id="chatQuickReplies" class="pd-chat-quick-replies"></div>
+    <form id="chatForm" class="pd-chat-form">
+      <input id="chatInput" type="text" class="pd-chat-input" placeholder="Ask about this email or the app…" autocomplete="off" />
+      <button type="submit" class="pd-btn pd-btn-primary pd-chat-send">Send</button>
+    </form>
+  </div>
+
+  <!-- Interactive detail modal (SPF/DKIM/DMARC chips, AI section, score rows, risk factors) -->
+  <div id="detailModalOverlay" class="pd-modal-overlay pd-hidden">
+    <div id="detailModalCard" class="pd-modal-card" role="dialog" aria-modal="true">
+      <button id="detailModalClose" class="pd-icon-btn pd-modal-close" type="button" aria-label="Close">✕</button>
+      <div id="detailModalBody" class="pd-modal-body"></div>
+    </div>
+  </div>
+
+  <script src="../lib/pdfReport.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+{
+  "method": "5-fold stratified cross-validation after exact-text deduplication",
+  "data": {
+    "originalRows": 18650,
+    "usableRows": 17513,
+    "removedEmptyOrInvalid": 552,
+    "removedExactDuplicates": 585,
+    "safeRows": 10977,
+    "phishingRows": 6536,
+    "maxTextCharacters": 4000
+  },
+  "folds": [
+    {
+      "fold": 1,
+      "testRows": 3503,
+      "accuracy": 0.986297459,
+      "precisionPhishing": 0.977255497,
+      "recallPhishing": 0.986228003,
+      "f1Phishing": 0.981721249,
+      "rocAuc": 0.998241569
+    },
+    {
+      "fold": 2,
+      "testRows": 3503,
+      "accuracy": 0.985441051,
+      "precisionPhishing": 0.970764618,
+      "recallPhishing": 0.990818669,
+      "f1Phishing": 0.980689133,
+      "rocAuc": 0.997649618
+    },
+    {
+      "fold": 3,
+      "testRows": 3503,
+      "accuracy": 0.983157294,
+      "precisionPhishing": 0.971320755,
+      "recallPhishing": 0.983944954,
+      "f1Phishing": 0.9775921,
+      "rocAuc": 0.998288089
+    },
+    {
+      "fold": 4,
+      "testRows": 3502,
+      "accuracy": 0.979154769,
+      "precisionPhishing": 0.965309201,
+      "recallPhishing": 0.979342005,
+      "f1Phishing": 0.972274972,
+      "rocAuc": 0.998030231
+    },
+    {
+      "fold": 5,
+      "testRows": 3502,
+      "accuracy": 0.981724729,
+      "precisionPhishing": 0.968349661,
+      "recallPhishing": 0.983167559,
+      "f1Phishing": 0.975702354,
+      "rocAuc": 0.998220551
+    }
+  ],
+  "aggregate": {
+    "accuracy": {
+      "mean": 0.98315506,
+      "standardDeviation": 0.00257482451
+    },
+    "precisionPhishing": {
+      "mean": 0.970599946,
+      "standardDeviation": 0.00394712064
+    },
+    "recallPhishing": {
+      "mean": 0.984700238,
+      "standardDeviation": 0.00377887506
+    },
+    "f1Phishing": {
+      "mean": 0.977595962,
+      "standardDeviation": 0.00342007019
+    },
+    "rocAuc": {
+      "mean": 0.998086012,
+      "standardDeviation": 0.000235238211
+    }
+  }
+}

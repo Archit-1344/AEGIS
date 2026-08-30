@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Trust Score Test Console</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 900px; margin: 30px auto; padding: 0 20px; color: #23262b; }
+  h1 { color: #182a4e; font-size: 20px; }
+  p.note { color: #5b7396; font-size: 13px; }
+  label { display: block; font-weight: bold; font-size: 12.5px; margin: 14px 0 4px 0; }
+  input[type=text], textarea { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #cfd6e2; border-radius: 6px; font-family: Arial, sans-serif; font-size: 12.5px; }
+  textarea { min-height: 70px; }
+  .row { display: flex; gap: 20px; }
+  .row > div { flex: 1; }
+  .checks { display: flex; gap: 20px; margin-top: 10px; }
+  .checks label { display: flex; align-items: center; gap: 6px; font-weight: normal; }
+  button { margin-top: 16px; margin-right: 8px; padding: 10px 18px; border-radius: 6px; border: 1px solid #182a4e; background: #182a4e; color: #fff; font-size: 13px; cursor: pointer; }
+  button.secondary { background: #fff; color: #182a4e; }
+  #output { margin-top: 20px; padding: 16px; background: #f6f8fc; border-radius: 8px; border: 1px solid #e3e8f0; white-space: pre-wrap; font-family: monospace; font-size: 12px; max-height: 500px; overflow-y: auto; }
+  .presets { margin-top: 10px; }
+  .presets button { background: #eef1f6; color: #23262b; border-color: #cfd6e2; font-size: 11px; padding: 6px 10px; }
+</style>
+</head>
+<body>
+  <h1>🧪 Trust Score Test Console</h1>
+  <p class="note">
+    Standalone dev tool — not part of the extension itself, opens directly in any browser via
+    <code>file://</code> or a local server. Runs the real scoring pipeline (same code the extension
+    uses) against hand-entered scenarios, so you can test fake/genuine/OTP mail without touching
+    real Gmail. "Full Score" makes real network calls (SPF/RDAP) — needs internet access.
+  </p>
+
+  <div class="presets">
+    <strong style="font-size:12px;">Presets:</strong>
+    <button type="button" onclick="loadPreset('genuine')">Genuine sender</button>
+    <button type="button" onclick="loadPreset('otp')">OTP code</button>
+    <button type="button" onclick="loadPreset('phishing')">Fake/phishing</button>
+    <button type="button" onclick="loadPreset('newsletter')">Newsletter (many links)</button>
+  </div>
+
+  <label>Sender email</label>
+  <input type="text" id="senderEmail" value="info@example.com" />
+
+  <div class="row">
+    <div>
+      <label>Subject</label>
+      <input type="text" id="subject" value="" />
+    </div>
+  </div>
+
+  <label>Body text</label>
+  <textarea id="bodyText"></textarea>
+
+  <label>Links (one per line, format: <code>url | anchor text</code>)</label>
+  <textarea id="linksInput" placeholder="https://example.com/page | Click here"></textarea>
+
+  <div class="checks">
+    <label><input type="checkbox" id="isKnownContact" /> In address book (known contact)</label>
+    <label><input type="checkbox" id="nativeSpamFlag" /> Platform already flagged as spam</label>
+  </div>
+
+  <button onclick="runQuick()">⚡ Quick Score (instant, no network)</button>
+  <button onclick="runFull()">🌐 Full Score (real SPF/RDAP lookups)</button>
+  <button class="secondary" onclick="runOtpLane()">⏱ OTP Fast-Lane Score</button>
+
+  <div id="output">Results will appear here.</div>
+
+  <script src="lib/levenshtein.js"></script>
+  <script src="lib/confusables.js"></script>
+  <script src="lib/doh.js"></script>
+  <script src="lib/rdap.js"></script>
+  <script src="lib/linkAnalysis.js"></script>
+  <script src="lib/attachmentAnalysis.js"></script>
+  <script src="lib/trustScore.js"></script>
+  <script>
+    const PRESETS = {
+      genuine: {
+        senderEmail: "info@venuratech.com",
+        subject: "Student Upskilling Training & Internship Group Invitation",
+        bodyText: "Dear Student,\n\nThank you for registering with Venura Tech. To ensure you don't miss any important announcements, we request you to join our official student communication group.",
+        linksInput: "https://chat.whatsapp.com/DzuqzoAdGVeJYUFLVA4x1N | Join the Official Group Here",
+        isKnownContact: false, nativeSpamFlag: false
+      },
+      otp: {
+        senderEmail: "noreply@accounts.google.com",
+        subject: "Your verification code is 482913",
+        bodyText: "Use this one-time code to complete sign in: 482913. This code expires in 10 minutes.",
+        linksInput: "",
+        isKnownContact: false, nativeSpamFlag: false
+      },
+      phishing: {
+        senderEmail: "support@paypa1-secure-login.com",
+        subject: "Urgent: verify your account or it will be suspended",
+        bodyText: "Your account will be suspended. Verify your account immediately by clicking the link below. Act now.",
+        linksInput: "http://185.23.44.1/login | www.paypal.com/login\nhttps://bit.ly/3xample | secure verification",
+        isKnownContact: false, nativeSpamFlag: false
+      },
+      newsletter: {
+        senderEmail: "digest@medium.com",
+        subject: "Your weekly reading digest",
+        bodyText: "Here are this week's top stories curated for you.",
+        linksInput: "https://medium.com/article-1 | Read more\nhttps://medium.com/article-2 | Read more\nhttps://medium.com/settings | Manage preferences",
+        isKnownContact: false, nativeSpamFlag: false
+      }
+    };
+
+    function loadPreset(name) {
+      const p = PRESETS[name];
+      document.getElementById("senderEmail").value = p.senderEmail;
+      document.getElementById("subject").value = p.subject;
+      document.getElementById("bodyText").value = p.bodyText;
+      document.getElementById("linksInput").value = p.linksInput;
+      document.getElementById("isKnownContact").checked = p.isKnownContact;
+      document.getElementById("nativeSpamFlag").checked = p.nativeSpamFlag;
+    }
+
+    function parseLinks() {
+      const raw = document.getElementById("linksInput").value.trim();
+      if (!raw) return [];
+      return raw.split("\n").filter(Boolean).map(line => {
+        const [href, text] = line.split("|").map(s => s.trim());
+        return { href, text: text || "" };
+      });
+    }
+
+    function getInputs() {
+      return {
+        senderEmail: document.getElementById("senderEmail").value.trim(),
+        subject: document.getElementById("subject").value.trim(),
+        bodyText: document.getElementById("bodyText").value.trim(),
+        links: parseLinks(),
+        isKnownContact: document.getElementById("isKnownContact").checked,
+        nativeSpamFlag: document.getElementById("nativeSpamFlag").checked
+      };
+    }
+
+    function output(obj) {
+      document.getElementById("output").textContent = JSON.stringify(obj, null, 2);
+    }
+
+    // BUG FIX (round-7): this file's runFull()/runOtpLane() previously kept
+    // the pre-v0.9 behavior of letting nativeSpamFlag short-circuit straight
+    // to a fixed score, skipping every other membrane. background.js and
+    // trustScore.js dropped that short-circuit in v0.9 (nativeSpamFlag is
+    // now a minor, evidence-weighted signal alongside everything else — see
+    // SCORE_WEIGHTS.NATIVE_SPAM_FLAG in lib/trustScore.js) but this test
+    // console was never updated to match, so testing a "platform flagged as
+    // spam" scenario here gave a result the real extension no longer
+    // produces. It also never computed brandImpersonation, dmarc, or
+    // attachmentSignals, so scenarios relying on those membranes silently
+    // under-scored relative to the real pipeline. All three fixed below —
+    // this now mirrors exactly what background.js's scoreSender() does.
+    function runQuick() {
+      const { senderEmail, subject, bodyText, isKnownContact, nativeSpamFlag } = getInputs();
+      const domain = senderEmail.split("@")[1] || "";
+      const typosquat = checkTyposquat(domain);
+      const brandImpersonation = checkBrandImpersonation(domain);
+      const result = computeQuickScore({
+        isKnownContact, nativeSpamFlag, typosquat, brandImpersonation,
+        contentText: `${subject} ${bodyText}`
+      });
+      output(result);
+    }
+
+    async function runFull() {
+      output("Running full pipeline (real network calls)…");
+      const { senderEmail, subject, bodyText, links, isKnownContact, nativeSpamFlag } = getInputs();
+      const domain = senderEmail.split("@")[1] || "";
+
+      if (isKnownContact) return output(computeTrustScore({ isKnownContact: true }));
+
+      const [dkimSpfPass, domainAgeDays, dmarc] = await Promise.all([
+        checkSpfRecord(domain),
+        checkDomainAge(domain),
+        checkDmarcRecord(domain)
+      ]);
+      const typosquat = checkTyposquat(domain);
+      const brandImpersonation = checkBrandImpersonation(domain);
+      const linkSignals = await analyzeLinks(links, {}); // no cache deps needed for a one-off test run
+
+      const result = computeTrustScore({
+        isKnownContact: false, dkimSpfPass, domainAgeDays, typosquat, brandImpersonation,
+        contentText: `${subject} ${bodyText}`, linkSignals, nativeSpamFlag, dmarc,
+        attachmentSignals: null
+      });
+      output(result);
+    }
+
+    async function runOtpLane() {
+      output("Running OTP fast-lane (SPF checked, RDAP skipped)…");
+      const { senderEmail, subject, bodyText, links, isKnownContact, nativeSpamFlag } = getInputs();
+      const domain = senderEmail.split("@")[1] || "";
+
+      if (isKnownContact) return output(computeTrustScore({ isKnownContact: true }));
+
+      const dkimSpfPass = await checkSpfRecord(domain);
+      const typosquat = checkTyposquat(domain);
+      const brandImpersonation = checkBrandImpersonation(domain);
+      const linkSignals = await analyzeLinks(links, { skipDomainAge: true });
+
+      const result = computeTrustScore({
+        isKnownContact: false, dkimSpfPass, domainAgeDays: null, typosquat, brandImpersonation,
+        contentText: `${subject} ${bodyText}`, linkSignals, nativeSpamFlag, provisional: true,
+        attachmentSignals: null
+      });
+      output(result);
+    }
+
+    loadPreset("genuine");
+  </script>
+</body>
+</html>

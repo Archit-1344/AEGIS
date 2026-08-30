@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "A.E.G.I.S.",
+  "version": "0.30.0",
+  "description": "A.E.G.I.S. \u2013 Anti-Phishing Email Gateway & Intelligence System. Client-side, privacy-preserving anti-phishing membrane pipeline for Gmail and Outlook Web.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3sWG5wJJuBaWJgPPx+4d/lIui9iEruUt6/FpWT1YpEj8Ku3WSNMktrhyrFbfPhHz6ih0MGdceYmU9IfeiQvDTC6Lsz47HBz+VpYp7ltayvF1Du0jjdrSB+hU1MxU5v1DZAAUIGdmEU9hJm1c65v3bsekTmC29B8hzGLddq3i5XTnLJp+yCgeR2+1Hh5SSs/0NWSWL4M6vpd3EoH4ILr7qCy6m/1hnX45hRZ3t6XEl0k4ICzLmqX1xPiKpHAy4SYd+cbp0uSvf9zKALzKldjeOsL/st/dAEwg5J40oINYHPwNe+8LKGjjrd3tlumoTF4AaxGTXEIlZp5MOIEaEuOOYwIDAQAB",
+  "permissions": ["storage", "alarms", "activeTab", "identity"],
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "https://outlook.live.com/*",
+    "https://outlook.office.com/*",
+    "https://outlook.office365.com/*",
+    "https://outlook.cloud.microsoft/*",
+    "https://gmail.googleapis.com/*",
+    "https://login.microsoftonline.com/*",
+    "https://graph.microsoft.com/*",
+    "https://cloudflare-dns.com/*",
+    "https://rdap.org/*"
+  ],
+  "oauth2": {
+    "client_id": "134567477332-ft2r5f12rc6rvgkgqg6st3k7tdhnmc9m.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/gmail.metadata"]
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://mail.google.com/*",
+        "https://outlook.live.com/*",
+        "https://outlook.office.com/*",
+        "https://outlook.office365.com/*",
+        "https://outlook.cloud.microsoft/*"
+      ],
+      "js": ["lib/levenshtein.js", "lib/uts39-data.js", "lib/confusables.js", "lib/senderIdentity.js", "lib/attachmentAnalysis.js", "lib/trustScore.js", "content.js"],
+      "css": ["styles/banner.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "A.E.G.I.S."
+  },
+  "icons": {
+    "128": "icons/icon128.png"
+  }
+}

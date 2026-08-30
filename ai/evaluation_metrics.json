@@ -1,0 +1,103 @@
+{
+  "dataset": "puyang2025/phish-email-datasets: Phishing_Email.parquet",
+  "datasetLicense": "See upstream dataset card and source dataset terms",
+  "split": "Stratified 80/20 after normalized exact-text deduplication",
+  "randomState": 1344,
+  "data": {
+    "originalRows": 18650,
+    "usableRows": 17513,
+    "removedEmptyOrInvalid": 552,
+    "removedExactDuplicates": 585,
+    "safeRows": 10977,
+    "phishingRows": 6536,
+    "maxTextCharacters": 4000
+  },
+  "trainRows": 14010,
+  "testRows": 3503,
+  "features": 12000,
+  "threshold": 0.5,
+  "accuracy": 0.982300885,
+  "precisionPhishing": 0.971948446,
+  "recallPhishing": 0.980872226,
+  "f1Phishing": 0.976389947,
+  "rocAuc": 0.997949252,
+  "confusionMatrix": {
+    "labels": [
+      "safe",
+      "phishing"
+    ],
+    "values": [
+      [
+        2159,
+        37
+      ],
+      [
+        25,
+        1282
+      ]
+    ],
+    "trueNegative": 2159,
+    "falsePositive": 37,
+    "falseNegative": 25,
+    "truePositive": 1282
+  },
+  "operatingThresholds": {
+    "lowSignal": {
+      "threshold": 0.5,
+      "precisionPhishing": 0.971948446,
+      "recallPhishing": 0.980872226,
+      "f1Phishing": 0.976389947,
+      "falsePositive": 37,
+      "falseNegative": 25
+    },
+    "suspicious": {
+      "threshold": 0.75,
+      "precisionPhishing": 0.990990991,
+      "recallPhishing": 0.925784239,
+      "f1Phishing": 0.957278481,
+      "falsePositive": 11,
+      "falseNegative": 97
+    },
+    "highConfidence": {
+      "threshold": 0.95,
+      "precisionPhishing": 0.996240602,
+      "recallPhishing": 0.608263198,
+      "f1Phishing": 0.755344418,
+      "falsePositive": 3,
+      "falseNegative": 512
+    }
+  },
+  "classificationReport": {
+    "safe": {
+      "precision": 0.9885531135531136,
+      "recall": 0.9831511839708561,
+      "f1-score": 0.9858447488584475,
+      "support": 2196.0
+    },
+    "phishing": {
+      "precision": 0.9719484457922669,
+      "recall": 0.9808722264728386,
+      "f1-score": 0.9763899466869764,
+      "support": 1307.0
+    },
+    "accuracy": 0.9823008849557522,
+    "macro avg": {
+      "precision": 0.9802507796726903,
+      "recall": 0.9820117052218473,
+      "f1-score": 0.981117347772712,
+      "support": 3503.0
+    },
+    "weighted avg": {
+      "precision": 0.9823577664896176,
+      "recall": 0.9823008849557522,
+      "f1-score": 0.9823170793071735,
+      "support": 3503.0
+    }
+  },
+  "limitations": [
+    "The upstream corpus mixes phishing and unwanted/spam-like email, so phishing probability is a linguistic risk signal rather than proof of fraud.",
+    "Historical public email corpora may not represent every modern campaign or organization.",
+    "Exact normalized duplicates are removed before splitting, but near-duplicate templates may remain.",
+    "Metrics describe only this held-out dataset split and are not a production-world accuracy guarantee."
+  ]
+}
