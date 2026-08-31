@@ -90,6 +90,16 @@ function Test-QuotaOrAuthFailure {
 
 function Get-ReviewVerdict {
     param([string]$Text)
+    try {
+        $parsed = $Text | ConvertFrom-Json
+        foreach ($property in @('response', 'result', 'output', 'text')) {
+            if ($null -ne $parsed.$property) {
+                $Text += "`n$($parsed.$property)"
+            }
+        }
+    } catch {
+        # Plain-text output is also supported.
+    }
     if ($Text -match '(?im)^\s*VERDICT\s*:\s*BLOCK\s*$') { return 'BLOCK' }
     if ($Text -match '(?im)^\s*VERDICT\s*:\s*APPROVE\s*$') { return 'APPROVE' }
     return 'UNKNOWN'
@@ -206,9 +216,9 @@ function Invoke-TestAndCommit {
     Set-Stage $State 'tests_running' 'Running deterministic suite.'
     $tests = Invoke-Native npm @('test') $State.WorktreePath (Join-Path $State.RunDirectory "tests-$($State.Corrections).log")
     if ($tests.ExitCode -ne 0) { Set-Stage $State 'tests_failed' 'Tests failed; correction required.'; return $false }
-    $check = Invoke-Native git @('-C', $State.WorktreePath, 'diff', '--check')
-    if ($check.ExitCode -ne 0) { Set-Stage $State 'paused_diff_check_failed' 'git diff --check failed.'; return $false }
     Assert-Success (Invoke-Native git @('-C', $State.WorktreePath, 'add', '-A')) 'Stage changes'
+    $check = Invoke-Native git @('-C', $State.WorktreePath, 'diff', '--cached', '--check')
+    if ($check.ExitCode -ne 0) { Set-Stage $State 'paused_diff_check_failed' 'git diff --cached --check failed.'; return $false }
     $names = Invoke-Native git @('-C', $State.WorktreePath, 'diff', '--cached', '--name-only')
     Assert-Success $names 'Staged-file inspection'
     $forbidden = @($names.Output -split "\r?\n" | Where-Object { $_ -match '(?i)(^|/)(\.env($|\.)|.*\.(pem|p12|pfx|key)$|id_rsa|credentials?\.|secrets?\.)' })
@@ -283,6 +293,12 @@ if ($PSCmdlet.ParameterSetName -eq 'Resume') {
 } else {
     $state = New-RunState $Description
     Save-State $state
+}
+
+if ($PSCmdlet.ParameterSetName -eq 'Resume') {
+    if ($state.Stage -in @('paused_gemini_quota_or_auth', 'paused_review_unstructured')) {
+        Set-Stage $state 'committed' 'Retrying independent review.'
+    }
 }
 
 if ($DryRun) {
