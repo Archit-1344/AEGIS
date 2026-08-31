@@ -88,9 +88,12 @@ function Show-Status {
         Installed = Test-CommandAvailable 'claude'
     } | Format-Table -AutoSize
 
-    Get-WorktreeState $MainPath,
-        Get-WorktreeState $CodexPath,
-        Get-WorktreeState $GeminiPath | Format-Table Path, Exists, Branch, Dirty -AutoSize
+    $states = @(
+        Get-WorktreeState -Path $MainPath
+        Get-WorktreeState -Path $CodexPath
+        Get-WorktreeState -Path $GeminiPath
+    )
+    $states | Format-Table Path, Exists, Branch, Dirty -AutoSize
 
     if ($env:GEMINI_API_KEY) {
         Write-Host 'Gemini API key: available in this process (value hidden).' -ForegroundColor Green
