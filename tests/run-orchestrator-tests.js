@@ -4,8 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 
-const root = path.resolve(__dirname);
-const source = fs.readFileSync(path.join(root, 'orchestrator.ps1'), 'utf8');
+const root = path.resolve(__dirname, '..');
+const source = fs.readFileSync(path.join(root, 'scripts', 'agents', 'orchestrator.ps1'), 'utf8');
 
 assert.match(source, /#Requires -Version 5\.1/);
 assert.match(source, /\[switch\]\$DryRun/);
