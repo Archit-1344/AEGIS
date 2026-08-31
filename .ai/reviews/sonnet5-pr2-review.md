@@ -23,4 +23,3 @@
 ## Verification
 
 All 11 test runners passed after the changes. Phase 1 scoring, OAuth, UI and network behavior remain unchanged.
-

@@ -11,4 +11,3 @@ Authentication-Results: mx.recipient.test; spf=pass smtp.mailfrom=example.net;
 Subject: Synthetic relay fixture
 
 This synthetic body must never be retained by the header parser.
-
